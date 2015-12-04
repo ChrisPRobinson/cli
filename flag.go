@@ -14,6 +14,11 @@ var BashCompletionFlag = BoolFlag{
 	Name: "generate-bash-completion",
 }
 
+var LoadFileFlag = StringFlag{
+	Name:  "load",
+	Usage: "information to load from alternate input source",
+}
+
 // This flag prints the version for the application
 var VersionFlag = BoolFlag{
 	Name:  "version, v",
@@ -36,14 +41,16 @@ type Flag interface {
 	// Apply Flag settings to the given flag set
 	Apply(*flag.FlagSet)
 	getName() string
+	getEnvVar() string
+	getHasDefaultValue() bool
 }
 
 func flagSet(name string, flags []Flag) *flag.FlagSet {
 	set := flag.NewFlagSet(name, flag.ContinueOnError)
-
 	for _, f := range flags {
 		f.Apply(set)
 	}
+
 	return set
 }
 
@@ -93,6 +100,18 @@ func (f GenericFlag) Apply(set *flag.FlagSet) {
 	eachName(f.Name, func(name string) {
 		set.Var(f.Value, name, f.Usage)
 	})
+}
+
+func (f GenericFlag) getEnvVar() string {
+	return f.EnvVar
+}
+
+func (f GenericFlag) getHasDefaultValue() bool {
+	if f.Value.String() != "" {
+		return true
+	}
+
+	return false
 }
 
 func (f GenericFlag) getName() string {
@@ -161,6 +180,18 @@ func (f StringSliceFlag) Apply(set *flag.FlagSet) {
 
 func (f StringSliceFlag) getName() string {
 	return f.Name
+}
+
+func (f StringSliceFlag) getEnvVar() string {
+	return f.EnvVar
+}
+
+func (f StringSliceFlag) getHasDefaultValue() bool {
+	if f.Value != nil {
+		return true
+	}
+
+	return false
 }
 
 // StringSlice is an opaque type for []int to satisfy flag.Value
@@ -235,6 +266,18 @@ func (f IntSliceFlag) getName() string {
 	return f.Name
 }
 
+func (f IntSliceFlag) getEnvVar() string {
+	return f.EnvVar
+}
+
+func (f IntSliceFlag) getHasDefaultValue() bool {
+	if f.Value != nil {
+		return true
+	}
+
+	return false
+}
+
 // BoolFlag is a switch that defaults to false
 type BoolFlag struct {
 	Name        string
@@ -275,6 +318,14 @@ func (f BoolFlag) Apply(set *flag.FlagSet) {
 
 func (f BoolFlag) getName() string {
 	return f.Name
+}
+
+func (f BoolFlag) getEnvVar() string {
+	return f.EnvVar
+}
+
+func (f BoolFlag) getHasDefaultValue() bool {
+	return false
 }
 
 // BoolTFlag this represents a boolean flag that is true by default, but can
@@ -318,6 +369,14 @@ func (f BoolTFlag) Apply(set *flag.FlagSet) {
 
 func (f BoolTFlag) getName() string {
 	return f.Name
+}
+
+func (f BoolTFlag) getEnvVar() string {
+	return f.EnvVar
+}
+
+func (f BoolTFlag) getHasDefaultValue() bool {
+	return false
 }
 
 // StringFlag represents a flag that takes as string value
@@ -368,6 +427,14 @@ func (f StringFlag) getName() string {
 	return f.Name
 }
 
+func (f StringFlag) getEnvVar() string {
+	return f.EnvVar
+}
+
+func (f StringFlag) getHasDefaultValue() bool {
+	return false
+}
+
 // IntFlag is a flag that takes an integer
 // Errors if the value provided cannot be parsed
 type IntFlag struct {
@@ -409,6 +476,14 @@ func (f IntFlag) Apply(set *flag.FlagSet) {
 
 func (f IntFlag) getName() string {
 	return f.Name
+}
+
+func (f IntFlag) getEnvVar() string {
+	return f.EnvVar
+}
+
+func (f IntFlag) getHasDefaultValue() bool {
+	return f.Value > 0
 }
 
 // DurationFlag is a flag that takes a duration specified in Go's duration
@@ -454,6 +529,14 @@ func (f DurationFlag) getName() string {
 	return f.Name
 }
 
+func (f DurationFlag) getEnvVar() string {
+	return f.EnvVar
+}
+
+func (f DurationFlag) getHasDefaultValue() bool {
+	return f.Value > 0
+}
+
 // Float64Flag is a flag that takes an float value
 // Errors if the value provided cannot be parsed
 type Float64Flag struct {
@@ -494,6 +577,14 @@ func (f Float64Flag) Apply(set *flag.FlagSet) {
 
 func (f Float64Flag) getName() string {
 	return f.Name
+}
+
+func (f Float64Flag) getEnvVar() string {
+	return f.EnvVar
+}
+
+func (f Float64Flag) getHasDefaultValue() bool {
+	return f.Value > 0
 }
 
 func prefixFor(name string) (prefix string) {
