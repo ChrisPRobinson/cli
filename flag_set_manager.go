@@ -2,6 +2,7 @@ package cli
 
 import (
 	"flag"
+	"os"
 	"strconv"
 	"time"
 )
@@ -9,6 +10,8 @@ import (
 type FlagSetManager interface {
 	HasFlag(name string) bool
 	IsSet(name string) bool
+	IsDefaultValueSet(name string) bool
+	IsEnvVarSet(name string) bool
 	NumFlags() int
 	Args() Args
 	Int(name string) int
@@ -27,12 +30,40 @@ type FlagSetManager interface {
 // can be used to retrieve context-specific Args and
 // parsed command-line options.
 type DefaultFlagSetManager struct {
-	set      *flag.FlagSet
-	setFlags map[string]bool
+	set                *flag.FlagSet
+	flags              []Flag
+	setFlags           map[string]bool
+	envVarsMap         map[string]string
+	hasDefaultValueMap map[string]bool
 }
 
-func NewFlagSetManager(set *flag.FlagSet) FlagSetManager {
-	return &DefaultFlagSetManager{set: set}
+func NewFlagSetManager(set *flag.FlagSet, flags []Flag) FlagSetManager {
+	envVarsMap := map[string]string{}
+	hasDefaultValueMap := map[string]bool{}
+
+	for _, f := range flags {
+		name := f.getName()
+		envVarsMap[name] = f.getEnvVar()
+		hasDefaultValueMap[name] = f.getHasDefaultValue()
+	}
+
+	return &DefaultFlagSetManager{set: set, envVarsMap: envVarsMap, hasDefaultValueMap: hasDefaultValueMap}
+}
+
+func (fsm *DefaultFlagSetManager) IsDefaultValueSet(name string) bool {
+	return fsm.hasDefaultValueMap[name]
+}
+
+func (fsm *DefaultFlagSetManager) IsEnvVarSet(name string) bool {
+	envVar := fsm.envVarsMap[name]
+	if envVar != "" {
+		val := os.Getenv(envVar)
+		if len(val) > 0 {
+			return true
+		}
+	}
+
+	return false
 }
 
 // Determines if the flag was actually set
@@ -51,7 +82,8 @@ func (fsm *DefaultFlagSetManager) IsSet(name string) bool {
 			fsm.setFlags[f.Name] = true
 		})
 	}
-	return fsm.setFlags[name] == true
+
+	return fsm.setFlags[name]
 }
 
 // Returns the number of flags set

@@ -38,6 +38,8 @@ type Command struct {
 	SkipFlagParsing bool
 	// Boolean to hide built-in help command
 	HideHelp bool
+	// Alternate File Input Source
+	UseYaml bool
 
 	// Full name of command for help, defaults to full command name, including parent commands.
 	HelpName        string
@@ -69,6 +71,10 @@ func (c Command) Run(ctx *Context) error {
 
 	if ctx.App.EnableBashCompletion {
 		c.Flags = append(c.Flags, BashCompletionFlag)
+	}
+
+	if c.UseYaml {
+		c.Flags = append(c.Flags, LoadFileFlag)
 	}
 
 	set := flagSet(c.Name, c.Flags)
@@ -118,7 +124,19 @@ func (c Command) Run(ctx *Context) error {
 		ShowCommandHelp(ctx, c.Name)
 		return nerr
 	}
+
 	context := NewContext(ctx.App, set, ctx)
+	if c.UseYaml {
+		ysl := &YamlSourceLoader{FilePath: context.String("load")}
+		valueMap, err := ysl.Load()
+		if err != nil {
+			fmt.Fprintln(ctx.App.Writer, err)
+			return nerr
+		}
+		fsm := NewFlagSetManager(set, c.Flags)
+		mapFlagSetManager := MapFlagSetManager{wrappedFsm: fsm, valueMap: valueMap}
+		context = NewContextWithFlagSetManager(ctx.App, &mapFlagSetManager, ctx)
+	}
 
 	if checkCommandCompletions(context, c.Name) {
 		return nil

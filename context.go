@@ -18,9 +18,14 @@ type Context struct {
 	parentContext  *Context
 }
 
+// Creates a new context using a FlagSetManager for redirection when invoking an App or Command action.
+func NewContextWithFlagSetManager(app *App, fsm FlagSetManager, parentCtx *Context) *Context {
+	return &Context{App: app, flagSetManager: fsm, parentContext: parentCtx}
+}
+
 // Creates a new context. For use in when invoking an App or Command action.
 func NewContext(app *App, set *flag.FlagSet, parentCtx *Context) *Context {
-	return &Context{App: app, flagSetManager: NewFlagSetManager(set), parentContext: parentCtx}
+	return &Context{App: app, flagSetManager: NewFlagSetManager(set, nil), parentContext: parentCtx}
 }
 
 // Looks up the value of a local int flag, returns 0 if no int flag exists
